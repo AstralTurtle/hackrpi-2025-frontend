@@ -1,35 +1,73 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import { CounterBar } from './components/CounterBar';
+import { ActionButtonBar } from './components/ActionButtonBar';
+import { SidePanel } from './components/SidePanel';
+import { GameMap } from './components/GameMap';
+import type { GameCounter, ActionButton, PanelType } from '../types/game';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [activePanel, setActivePanel] = useState<PanelType>(null);
+
+  // Sample game counters - replace with your actual game state
+  const counters: GameCounter[] = [
+    { id: 'money', label: 'Money', value: 1000000, icon: '💰' },
+    { id: 'population', label: 'Population', value: 3437202, icon: '👥' },
+    { id: 'stations', label: 'Stations', value: 15, icon: '🚉' },
+    { id: 'lines', label: 'Lines', value: 3, icon: '🚇' },
+  ];
+
+  // Action buttons - replace with your actual actions
+  const actionButtons: ActionButton[] = [
+    {
+      id: 'build',
+      label: 'Build',
+      icon: '🔨',
+      onClick: () => setActivePanel(activePanel === 'build' ? null : 'build'),
+    },
+    {
+      id: 'finance',
+      label: 'Finance',
+      icon: '💵',
+      onClick: () => setActivePanel(activePanel === 'finance' ? null : 'finance'),
+    },
+    {
+      id: 'politics',
+      label: 'Politics',
+      icon: '🏛️',
+      onClick: () => setActivePanel(activePanel === 'politics' ? null : 'politics'),
+    },
+    {
+      id: 'research',
+      label: 'Research',
+      icon: '🔬',
+      onClick: () => setActivePanel(activePanel === 'research' ? null : 'research'),
+    },
+  ];
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-gray-900">
+      {/* Top Counter Bar */}
+      <CounterBar counters={counters} />
+
+      {/* Action Button Bar */}
+      <ActionButtonBar
+        buttons={actionButtons}
+        activeButton={activePanel}
+      />
+
+      {/* Main Content Area: Map with overlay panel */}
+      <div className="flex-1 relative overflow-hidden">
+        {/* Game Map (always full width) */}
+        <GameMap />
+
+        {/* Side Panel (overlays on top of map) */}
+        <SidePanel
+          activePanel={activePanel}
+          onClose={() => setActivePanel(null)}
+        />
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
