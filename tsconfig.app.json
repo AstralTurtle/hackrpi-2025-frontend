@@ -24,5 +24,11 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "components/ActionButtonBar.tsx", "components/CounterBar.tsx", "components/GameMap.tsx", "components/SidePanel.tsx"]
+  "include": [
+    "src",
+    "components/ActionButtonBar.tsx",
+    "components/CounterBar.tsx",
+    "components/GameMap.tsx",
+    "components/SidePanel.tsx"
+  ]
 }

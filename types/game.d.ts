@@ -1,15 +1,41 @@
-export interface GameCounter {
-  id: string;
-  label: string;
-  value: number;
-  icon: string; // You can replace this with an icon component later
+export interface Player {
+  name: string;
+  money: number;
 }
 
-export interface ActionButton {
+export interface Station {
   id: string;
-  label: string;
-  icon: string;
-  onClick: () => void;
+  owner: Player;
+  awarded_year: number;
+  built: boolean;
+  cost: number;
+  revenue: number;
 }
 
-export type PanelType = 'build' | 'finance' | 'politics' | 'research' | null;
+export interface StationDetails {
+  name: string;
+  lat: number;
+  lon: number;
+}
+
+export interface Line {
+  name: string;
+  year: number;
+  stations: Station[];
+  owner: Player;
+}
+
+export interface Contract {
+  biddable: Station | Line;
+  highest_bid: number;
+  highest_bidder: Player | null;
+  deadline_year: number;
+}
+
+export interface Game {
+  code: string;
+  year: number;
+  turns: number;
+  lines: Line[];
+  contracts: Contract[];
+}
