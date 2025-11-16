@@ -1,11 +1,13 @@
 import React from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
-import type { Station } from "../../types/game";
+import type { Station, Line, StationDetails } from "../../types/game";
 
 interface StationMarkerProps {
-  station: Station;
-  onClick: (station: Station) => void;
+  stationDetail: Record<string, StationDetails>;
+  station : Station;
+  line: Line;
+  onClick: (station: Station, line: Line) => void;
 }
 
 // Create a custom icon for stations
@@ -31,19 +33,21 @@ const createStationIcon = (color: string = "#ef4444") => {
 
 export const StationMarker: React.FC<StationMarkerProps> = ({
   station,
+  stationDetail,
+  line,
   onClick,
 }) => {
   return (
     <Marker
-      position={station.position}
+      position={[stationDetail[station.id].lat, stationDetail[station.id].lon]}
       icon={createStationIcon()}
       eventHandlers={{
-        click: () => onClick(station),
+        click: () => onClick(station, line),
       }}
     >
       <Popup>
         <div className="text-sm">
-          <strong>{station.name}</strong>
+          <strong>{station.id}</strong>
           <br />
           Click for more details
         </div>

@@ -7,7 +7,7 @@ const stationDetails = stations_json as Record<string, StationDetails>;
 
 interface LinesPanelProps {
   lines: Line[];
-  onStationClick: (station: Station) => void;
+  onStationClick: (station: Station, line: Line) => void;
 }
 
 // Color scheme for each owner
@@ -41,7 +41,11 @@ const calculateOwnership = (lineStations: Station[]) => {
   };
 
   lineStations.forEach((station) => {
-    ownership[station.owner.name]++;
+    if (!(station.owner)) {
+      ownership["unclaimed"]++;
+    } else {
+      ownership[station.owner.name]++;
+    }
   });
 
   return {
@@ -203,7 +207,7 @@ export const LinesPanel: React.FC<LinesPanelProps> = ({
                             key={station.id}
                             onClick={(e) => {
                               e.stopPropagation();
-                              onStationClick(station);
+                              onStationClick(station, line);
                             }}
                             className="flex items-center justify-between p-2 bg-gray-700 rounded hover:bg-gray-650 cursor-pointer transition-colors"
                           >
@@ -215,15 +219,15 @@ export const LinesPanel: React.FC<LinesPanelProps> = ({
                                 className={`w-6 h-6 rounded-full border-2 flex items-center justify-center`}
                               >
                                 <span className="text-xs font-bold text-white">
-                                  {station.owner.name === "unclaimed"
-                                    ? "?"
-                                    : station.owner.name.substring(0, 1)}
+                                  {station.owner ?
+                                    station.owner.name.substring(0, 1):"Unclaimed"
+                                    }
                                 </span>
                               </div>
                               <span className={`text-xs font-semibold`}>
-                                {station.owner.name === "unclaimed"
-                                  ? "Unclaimed"
-                                  : station.owner.name}
+                                {station.owner ?
+                                  station.owner.name:  "Unclaimed"
+                                   }
                               </span>
                             </div>
                           </div>

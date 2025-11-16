@@ -1,27 +1,29 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { StatisticsBar } from "./components/StatisticsBar";
 import { MenuBar } from "./components/MenuBar";
 import { SidePanel } from "./components/SidePanel";
 import { GameMap, type GameMapRef } from "./components/GameMap";
 import { StationDetailsPanel } from "./components/panels/StationDetailsPanel";
-import { BuildPanel } from "./components/panels/BuildPanel";
-import { FinancePanel } from "./components/panels/FinancePanel";
-import { PoliticsPanel } from "./components/panels/PoliticsPanel";
-import { ResearchPanel } from "./components/panels/ResearchPanel";
 import { LinesPanel } from "./components/panels/LinesPanel";
 import { JoinModal } from "./components/JoinModal";
 import { LobbyModal } from "./components/LobbyModal";
-import type { Station, Game, Player, StationDetails } from "../types/game";
-import stations from "../src/stations.json";
+import type { Station, Game, Player, StationDetails, Line } from "../types/game";
+import stations_json from "../src/stations.json";
+import { BidPanel } from "./components/panels/BidPanel";
+import { useWebSocket } from "./hooks/useWebSocket";
 
+// const WS_BASE_URL = "ws://140.82.13.6:8000/game";
 const WS_BASE_URL = "ws://localhost:8000/game";
 
 function App() {
-  const wsRef = useRef<WebSocket | null>(null);
+  const { connect, send, setTeam } = useWebSocket(WS_BASE_URL);
   const mapRef = useRef<GameMapRef>(null);
 
-  const [activePanel, setActivePanel] = useState<PanelType>(null);
+  const [activePanel, setActivePanel] = useState<string>("");
   const [selectedStation, setSelectedStation] = useState<Station | undefined>(
+    undefined
+  );
+  const [selectedLine, setSelectedLine] = useState<Line | undefined>(
     undefined
   );
 
@@ -50,27 +52,11 @@ function App() {
 
     if (!room) return;
 
-    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
-      try {
-        wsRef.current.close();
-      } catch {}
-    }
-
-    const url = `${WS_BASE_URL}/${encodeURIComponent(room)}`;
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
-
-    ws.addEventListener("open", () => {
-      console.info("WebSocket connected to", url);
-    });
-
-    ws.addEventListener("message", (ev) => {
-      console.debug("ev", ev);
-      console.debug("WS message:", ev.data);
-
-      try {
-        const payload =
-          typeof ev.data === "string" ? JSON.parse(ev.data) : ev.data;
+    connect(
+      room,
+      (payload) => {
+        // Handle incoming parsed payload
+        console.debug("WS payload", payload);
 
         if (payload && payload.game_data) {
           console.info("Received game_data", payload);
@@ -81,6 +67,10 @@ function App() {
             }
             if (gd.player) {
               setPlayer(gd.player as Player);
+              // Store team name for reconnection
+              if (gd.player.name) {
+                setTeam(gd.player.name);
+              }
             }
             console.info("process game_data");
           } catch (err) {
@@ -94,43 +84,38 @@ function App() {
           setJoinOpen(false);
 
           try {
-            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({}));
-            }
+            send({});
           } catch (err) {
             console.error("Failed to request game_data from server", err);
           }
         }
-      } catch (err) {
-        console.debug("WS message parse error", err);
-      }
-    });
 
-    ws.addEventListener("error", (ev) => {
-      console.error("WebSocket error", ev);
-    });
+        if (payload && payload.action === "reconnect_required") {
+          console.info("Server requires reconnect with team name");
+          // Send reconnect action with the current player's team name
+          if (player.name) {
+            send({ action: "reconnect", team: player.name });
+            console.info("Sent reconnect with team:", player.name);
+          } else {
+            console.warn("No player name available for reconnect");
+          }
+        }
 
-    ws.addEventListener("close", () => {
-      console.info("WebSocket closed for", room);
-      if (wsRef.current === ws) {
-        wsRef.current = null;
+        if (payload && payload.notify) {
+          alert(payload.notify);
+        }
+      },
+      () => {
+        console.info("WebSocket opened for", room);
+      },
+      () => {
+        console.info("WebSocket closed for", room);
       }
-    });
+    );
 
     setLobbyCode(room);
     setLobbyOpen(true);
   };
-
-  // Ensures WebSocket is closed when client is closed
-  useEffect(() => {
-    return () => {
-      try {
-        wsRef.current?.close();
-      } catch {}
-
-      wsRef.current = null;
-    };
-  }, []);
 
   // Create game request — returns the room/code string
   const createGameRequest = async (): Promise<string> => {
@@ -147,10 +132,11 @@ function App() {
     return String(code);
   };
 
-  const handleStationClick = (station: Station) => {
+  const handleStationClick = (station: Station, line: Line) => {
     setSelectedStation(station);
+    setSelectedLine(line)
 
-    const stationsDictionary = stations as Record<string, StationDetails>;
+    const stationsDictionary = stations_json as Record<string, StationDetails>;
     mapRef.current?.flyToStation([
       stationsDictionary[station.id].lat,
       stationsDictionary[station.id].lon,
@@ -158,8 +144,9 @@ function App() {
   };
 
   const handleClosePanel = () => {
-    setActivePanel(null);
+    setActivePanel("");
     setSelectedStation(undefined);
+    setSelectedLine(undefined);
   };
 
   // Determine panel title and content based on state
@@ -171,41 +158,35 @@ function App() {
 
   const getPanelContent = () => {
     // If a station is selected, show station details
-    if (selectedStation) {
-      return <StationDetailsPanel station={selectedStation} />;
+    if (selectedStation && selectedLine) {
+        const stationsDictionary = stations_json as Record<string, StationDetails>;
+      return <StationDetailsPanel  player={player} line={selectedLine} station={selectedStation} stationDetails={stationsDictionary} build={build}/>;
     }
 
+    const stationsDictionary = stations_json as Record<string, StationDetails>;
     // Otherwise, show the appropriate panel content
     switch (activePanel) {
-      case "build":
-        return <BuildPanel />;
-      case "finance":
-        return <FinancePanel />;
-      case "politics":
-        return <PoliticsPanel />;
-      case "research":
-        return <ResearchPanel />;
+      case "bid":
+        return <BidPanel lines={game.lines} Contracts={game.contracts} currentPlayer={player.name} currentYear={game.year} playerMoney={player.money}  bid={bid}  stationDetails={stationsDictionary} />;
       case "lines":
         return (
           <LinesPanel lines={game.lines} onStationClick={handleStationClick} />
         );
       default:
-        return null;
+        return <></>;
     }
   };
 
   const bid = (bid: number, biddable: string) => {
-    wsRef.current?.send(
-      JSON.stringify({ action: "bid", bid: bid, biddable: biddable })
-    );
+    send({ action: "bid", bid: bid, biddable: biddable });
   };
 
   const build = (line: string, id: string) => {
-    wsRef.current?.send(JSON.stringify({ action: "bid", line: line, id: id }));
+    send({ action: "build", line: line, id: id });
   };
 
   const end_turn = () => {
-    wsRef.current?.send(JSON.stringify({ action: "end_turn" }));
+    send({ action: "end_turn" });
   };
 
   return (
@@ -236,7 +217,8 @@ function App() {
                 icon: "💰",
                 onClick: () => {
                   setSelectedStation(undefined);
-                  setActivePanel(activePanel === "bid" ? null : "bid");
+                  setSelectedLine(undefined);
+                  setActivePanel(activePanel === "bid" ? "" : "bid");
                 },
               },
               {
@@ -245,7 +227,8 @@ function App() {
                 icon: "🚆",
                 onClick: () => {
                   setSelectedStation(undefined);
-                  setActivePanel(activePanel === "lines" ? null : "lines");
+                  setSelectedLine(undefined);
+                  setActivePanel(activePanel === "lines" ? "" : "lines");
                 },
               },
               {
@@ -265,20 +248,20 @@ function App() {
             📅 {game.year}
           </div>
         </div>
-        <div
-          className="text-3xl bg-white h-40 w-40"
+        <button
+          className="text-4xl bg-blue-400 rounded-md h-full w-40 p-4"
           onClick={() => {
             end_turn();
           }}
         >
           End Turn
-        </div>
+        </button>
       </div>
 
       {/* Main Content Area: Map with overlay panel */}
       <div className="flex-1 relative overflow-hidden">
         {/* Game Map (always full width) */}
-        <GameMap ref={mapRef} onStationClick={handleStationClick} />
+        <GameMap ref={mapRef} lines={game.lines} stationDetails={stations_json} onStationClick={handleStationClick} />
 
         {/* Side Panel (overlays on top of map) */}
         <SidePanel
@@ -310,22 +293,13 @@ function App() {
           onClose={() => setLobbyOpen(false)}
           code={lobbyCode}
           onClaimTeam={(team) => {
-            // send claim over socket if available
-            if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-              console.warn("Cannot claim team: socket not open");
-              return;
-            }
-            wsRef.current.send(JSON.stringify({ action: "join", team }));
+            send({ action: "join", team });
           }}
           onStart={() => {
-            if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-              console.warn("Cannot start game: socket not open");
-            } else {
-              try {
-                wsRef.current.send(JSON.stringify({ action: "start" }));
-              } catch (err) {
-                console.error("Failed to send start action", err);
-              }
+            try {
+              send({ action: "start" });
+            } catch (err) {
+              console.error("Failed to send start action", err);
             }
             // Do not close modals here; the server will send an action: 'start' message
             // which the client handles and will close modals when appropriate.

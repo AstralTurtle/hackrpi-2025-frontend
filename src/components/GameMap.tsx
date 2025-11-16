@@ -1,12 +1,13 @@
 import { useRef, useImperativeHandle, forwardRef } from "react";
 import { MapContainer, TileLayer, ZoomControl, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import type { Station } from "../../types/game";
+import type { Line, Station, StationDetails } from "../../types/game";
 import { StationMarker } from "./StationMarker";
 
 interface GameMapProps {
-  stations?: Station[];
-  onStationClick?: (station: Station) => void;
+  lines: Line[];
+  stationDetails: Record<string, StationDetails>
+  onStationClick?: (station: Station, line: Line) => void;
 }
 
 export interface GameMapRef {
@@ -31,7 +32,7 @@ const MapController = forwardRef<GameMapRef>((_, ref) => {
 MapController.displayName = "MapController";
 
 export const GameMap = forwardRef<GameMapRef, GameMapProps>(
-  ({ stations = [], onStationClick }, ref) => {
+  ({ lines, onStationClick, stationDetails }, ref) => {
     // New York City coordinates
     const NYC_CENTER: [number, number] = [40.7128, -74.006];
     const mapControllerRef = useRef<GameMapRef>(null);
@@ -58,13 +59,17 @@ export const GameMap = forwardRef<GameMapRef, GameMapProps>(
           <MapController ref={mapControllerRef} />
 
           {/* Render station markers */}
-          {stations.map((station) => (
-            <StationMarker
-              key={station.id}
-              station={station}
-              onClick={onStationClick || (() => {})}
-            />
-          ))}
+          {lines.flatMap((line) =>
+            line.stations.map((station) => (
+              <StationMarker
+                key={station.id}
+                line={line}
+                stationDetail={stationDetails}
+                station={station}
+                onClick={onStationClick ?? (() => {})}
+              />
+            ))
+          )}
         </MapContainer>
       </div>
     );

@@ -1,4 +1,6 @@
-const API_BASE_URL = "http://localhost:8000";
+// const API_BASE_URL = "http://140.82.13.6:8000/game";
+const API_BASE_URL = "http://localhost:8000/game";
+
 
 import React, { useEffect, useState } from "react";
 import { Modal } from "./Modal";

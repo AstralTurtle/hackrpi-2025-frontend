@@ -1,21 +1,23 @@
 import React from "react";
-import type { Station } from "../../../types/game";
-import stations_json from "../../stations.json";
+import type { Station, Line, StationDetails, Player } from "../../../types/game";
+
 interface StationDetailsPanelProps {
   station: Station;
+  line: Line;
+  stationDetails: Record<string, StationDetails>
+  player: Player;
+  build: (line: string, id: string) => void;
 }
 
 export const StationDetailsPanel: React.FC<StationDetailsPanelProps> = ({
-  station,
+  station, line, stationDetails, build, player
 }) => {
-  const stationInfo = (
-    stations_json as Record<string, { name?: string } | undefined>
-  )[station.id];
+
   return (
     <>
       <div className="mb-6">
         <h3 className="text-2xl font-bold text-white mb-2">
-          {stationInfo?.name ?? station.id}
+          {stationDetails[station.id].name ?? station.id}
         </h3>
         {/* <div className="text-sm text-gray-400">Station ID: {station.id}</div> */}
       </div>
@@ -75,15 +77,13 @@ export const StationDetailsPanel: React.FC<StationDetailsPanelProps> = ({
         </div> */}
       </div>
 
-      {/* Action Buttons add bid button if station is biddable*/}
+      {/* Action Buttons */}
       <div className="mt-6 space-y-2">
-        <button className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-3 px-4 rounded transition-colors">
-          Upgrade Station
-        </button>
-        <button className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded transition-colors">
-          View Analytics
+        <button className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-3 px-4 rounded transition-colors" onClick={()=>{build(line.name, station.id)}}>
+          Build
         </button>
       </div>
+      
     </>
   );
 };

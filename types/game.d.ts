@@ -30,6 +30,7 @@ export interface Contract {
   highest_bid: number;
   highest_bidder: Player | null;
   deadline_year: number;
+  type: string;
 }
 
 export interface Game {

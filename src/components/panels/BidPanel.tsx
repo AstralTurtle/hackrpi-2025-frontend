@@ -1,42 +1,29 @@
 import React, { useState } from "react";
-import type { Line, Station, Contract } from "../../../types/game";
+import type { Line, Station, Contract, StationDetails } from "../../../types/game";
 
-export const BidPanel: React.FC<BidPanelProps> = ({
-  lines,
-  stations,
-  Contracts,
-  currentPlayer,
-  currentYear,
-  playerMoney,
-  onSubmitNewBid,
-  onOutbid,
-}) => {
-  const [selectedLineId, setSelectedLineId] = useState<string>("");
-  const [newBidAmount, setNewBidAmount] = useState<string>("");
-  const [outbidAmounts, setOutbidAmounts] = useState<Record<string, string>>(
-    {}
-  );
 
   interface BidPanelProps {
     lines: Line[];
-    stations: Station[];
     Contracts: Contract[];
     currentPlayer: string;
     currentYear: number;
     playerMoney: number;
-    onSubmitNewBid: (lineId: string, amount: number) => void;
-    onOutbid: (bidId: string, amount: number) => void;
+    bid: (bid: number, biddable: string) => void;
+    stationDetails: Record<string, StationDetails>
   }
 
-  const MINIMUM_BID_INCREMENT = 500000;
+
+export const BidPanel: React.FC<BidPanelProps> = ({
+  Contracts,
+  playerMoney,
+  bid,
+  stationDetails,
+}) => {
+  const [selectedLineId, setSelectedLineId] = useState<string>("");
+  const [newBidAmount, setNewBidAmount] = useState<number>(0);
+
 
   // Color scheme for each owner
-  const OWNER_COLORS = {
-    unclaimed: { bg: "bg-gray-600", text: "text-gray-400" },
-    IRT: { bg: "bg-red-600", text: "text-red-400" },
-    BMT: { bg: "bg-blue-600", text: "text-blue-400" },
-    IND: { bg: "bg-green-600", text: "text-green-400" },
-  };
 
   // Helper to check if a line has 2 or more stations built
   // const isLineBuilding = (line: Line): boolean => {
@@ -64,49 +51,31 @@ export const BidPanel: React.FC<BidPanelProps> = ({
 
 
 
-  const handleSubmitNewBid = () => {
-    if (!selectedLineId || !newBidAmount) return;
 
-    const amount = parseInt(newBidAmount);
-    if (isNaN(amount) || amount <= 0) {
-      alert("Please enter a valid bid amount");
-      return;
-    }
+  // const handleOutbid = (bidId: string, currentAmount: number) => {
+  //   const outbidAmountStr = outbidAmounts[bidId] || "";
+  //   const amount = parseInt(outbidAmountStr);
 
-    if (amount > playerMoney) {
-      alert("Insufficient funds!");
-      return;
-    }
+  //   if (isNaN(amount) || amount <= 0) {
+  //     alert("Please enter a valid bid amount");
+  //     return;
+  //   }
 
-    onSubmitNewBid(selectedLineId, amount);
-    setSelectedLineId("");
-    setNewBidAmount("");
-  };
+  //   if (amount < currentAmount + MINIMUM_BID_INCREMENT) {
+  //     alert(
+  //       `You must bid at least $${MINIMUM_BID_INCREMENT.toLocaleString()} more than the current bid`
+  //     );
+  //     return;
+  //   }
 
-  const handleOutbid = (bidId: string, currentAmount: number) => {
-    const outbidAmountStr = outbidAmounts[bidId] || "";
-    const amount = parseInt(outbidAmountStr);
+  //   if (amount > playerMoney) {
+  //     alert("Insufficient funds!");
+  //     return;
+  //   }
 
-    if (isNaN(amount) || amount <= 0) {
-      alert("Please enter a valid bid amount");
-      return;
-    }
-
-    if (amount < currentAmount + MINIMUM_BID_INCREMENT) {
-      alert(
-        `You must bid at least $${MINIMUM_BID_INCREMENT.toLocaleString()} more than the current bid`
-      );
-      return;
-    }
-
-    if (amount > playerMoney) {
-      alert("Insufficient funds!");
-      return;
-    }
-
-    onOutbid(bidId, amount);
-    setOutbidAmounts({ ...outbidAmounts, [bidId]: "" });
-  };
+  //   onOutbid(bidId, amount);
+  //   setOutbidAmounts({ ...outbidAmounts, [bidId]: "" });
+  // };
 
   // const getLineName = (lineId: string): string => {
   //   return lines.find((l) => l.id === lineId)?.name || lineId;
@@ -147,7 +116,19 @@ export const BidPanel: React.FC<BidPanelProps> = ({
             >
               <option value="">-- Choose a contract --</option>
               {
-                Contracts.forEach();
+                Contracts.map((contract : Contract) => {
+                  let key = "";
+                  if (contract.type === 'line'){
+                    let line = contract.biddable as Line;
+                    key = line.name;}
+                  else {
+                    let station = contract.biddable as Station;
+                    key = stationDetails[station.id].name ;
+                  }
+                  return <option key={key} value={key}>
+                      {key} ({contract.type.toUpperCase()})
+                  </option>
+                })
               
               /* {availableLines.map((line) => (
                 <option key={line.id} value={line.id}>
@@ -155,7 +136,7 @@ export const BidPanel: React.FC<BidPanelProps> = ({
                 </option>
               ))} */}
             </select>
-            {Contracts === 0 && (
+            {Contracts.length === 0 && (
               <p className="text-xs text-gray-500 mt-1">
                 No lines available for auction
               </p>
@@ -172,7 +153,7 @@ export const BidPanel: React.FC<BidPanelProps> = ({
               <input
                 type="number"
                 value={newBidAmount}
-                onChange={(e) => setNewBidAmount(e.target.value)}
+                onChange={(e) => setNewBidAmount(parseInt(e.target.value))}
                 placeholder="0"
                 className="w-full bg-gray-800 text-white p-2 pl-7 rounded border border-gray-600 focus:border-yellow-500 focus:outline-none"
               />
@@ -184,7 +165,7 @@ export const BidPanel: React.FC<BidPanelProps> = ({
 
           {/* Submit Button */}
           <button
-            onClick={handleSubmitNewBid}
+            onClick={() => {bid(newBidAmount, selectedLineId)}}
             disabled={!selectedLineId || !newBidAmount}
             className="w-full bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded transition-colors"
           >
@@ -193,20 +174,20 @@ export const BidPanel: React.FC<BidPanelProps> = ({
         </div>
       </div>
 
-      {/* Active Auctions List */}
+     {/* Active Auctions List
       <div>
         <h3 className="text-lg font-semibold text-white mb-4">
           Active Auctions
         </h3>
 
-        {activeBids.length === 0 ? (
+        {Contracts.length === 0 ? (
           <div className="bg-gray-700 p-6 rounded border border-gray-600 text-center text-gray-400">
             No active auctions. Start one above!
           </div>
         ) : (
           <div className="space-y-3">
-            {activeBids.map((bid) => {
-              const line = lines.find((l) => l.id === bid.lineId);
+            {Contracts.map((bid) => {
+              const line = lines.find((l) => l.name === bid.);
               const isPlayerLeading = bid.leadingBidder === currentPlayer;
               const completionPct = getLineCompletionPercentage(bid.lineId);
 
@@ -217,7 +198,7 @@ export const BidPanel: React.FC<BidPanelProps> = ({
                     isPlayerLeading ? "border-green-500" : "border-gray-600"
                   }`}
                 >
-                  {/* Auction Header */}
+                 
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h4 className="font-semibold text-white text-lg">
@@ -234,7 +215,6 @@ export const BidPanel: React.FC<BidPanelProps> = ({
                     )}
                   </div>
 
-                  {/* Current Bid Info */}
                   <div className="bg-gray-800 p-3 rounded mb-3">
                     <div className="flex items-center justify-between">
                       <div>
@@ -259,7 +239,7 @@ export const BidPanel: React.FC<BidPanelProps> = ({
                     </div>
                   </div>
 
-                  {/* Outbid Section */}
+              {/* Outbid Section 
                   <div className="flex gap-2">
                     <div className="flex-1 relative">
                       <span className="absolute left-3 top-2 text-gray-400 text-sm">
@@ -285,6 +265,7 @@ export const BidPanel: React.FC<BidPanelProps> = ({
                       Outbid
                     </button>
                   </div>
+         
 
                   <p className="text-xs text-gray-500 mt-2">
                     Minimum bid: $
@@ -295,7 +276,7 @@ export const BidPanel: React.FC<BidPanelProps> = ({
             })}
           </div>
         )}
-      </div>
+      </div> */}
     </>
   );
 };
